@@ -1,0 +1,290 @@
+.section-title {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+}
+
+.calculator-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.method-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.input-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.radio-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    /* Pill shape */
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.radio-option:hover {
+    background-color: var(--bg-color);
+}
+
+.radio-option.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.radio-option input {
+    display: none;
+}
+
+.main-input-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-color);
+}
+
+.integral-symbol {
+    font-size: 1.2rem;
+    color: var(--text-primary);
+}
+
+.input-group.full-width {
+    flex: 1;
+}
+
+.main-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 1.25rem;
+    outline: none;
+    font-family: inherit;
+    color: var(--text-primary);
+}
+
+.main-input::placeholder {
+    color: #adb5bd;
+}
+
+.btn-go {
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background-color: var(--primary-color);
+}
+
+.params-row {
+    display: flex;
+    gap: 2rem;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.input-group label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.param-input {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    width: 80px;
+    font-size: 1rem;
+}
+
+.param-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(187, 27, 27, 0.1);
+}
+
+/* Solution Steps Styles */
+.steps-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.step-item {
+    border-left: 3px solid var(--primary-color);
+    padding-left: 1.5rem;
+    overflow-x: auto;
+}
+
+/* MathLive Overrides and Displays */
+math-field {
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    --keyboard-zindex: 2000;
+}
+
+math-field:focus-within {
+    outline: none;
+}
+
+/* Hide default virtual keyboard toggle if we want to control it or keep it subtle */
+/* math-field::part(virtual-keyboard-toggle) {
+  display: none;
+} */
+
+.integral-display,
+.dx-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    padding: 0 0.5rem;
+}
+
+.placeholder-text {
+    position: absolute;
+    top: 50%;
+    left: 1rem;
+    transform: translateY(-50%);
+    color: #adb5bd;
+    pointer-events: none;
+    font-style: italic;
+}
+
+/* Ensure input group handles the MathField correctly */
+.input-group.full-width {
+    position: relative;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    background: white;
+    /* Make input distinct */
+    display: flex;
+    align-items: center;
+}
+
+.input-group.full-width:focus-within {
+    box-shadow: 0 0 0 2px rgba(187, 27, 27, 0.1);
+    border-color: var(--primary-color);
+}
+
+
+/* Keypad Styles */
+.math-keypad {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    margin-top: 0.5rem;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.keypad-tabs {
+    display: flex;
+    background: #f1f3f4;
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+}
+
+.keypad-tab {
+    border: none;
+    background: transparent;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-right: 1px solid transparent;
+    border-left: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.keypad-tab:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.keypad-tab.active {
+    background: white;
+    color: var(--primary-color);
+    border-right: 1px solid var(--border-color);
+    border-left: 1px solid var(--border-color);
+    margin-bottom: -1px;
+    /* Overlap border */
+    font-weight: 700;
+}
+
+/* First tab special text styling (Basic) */
+.keypad-tab:first-child.active {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+}
+
+.keypad-tab-spacer {
+    flex: 1;
+}
+
+.keypad-grid {
+    display: grid;
+    grid-template-columns: repeat(11, 1fr);
+    /* 11 columns like reference */
+    gap: 1px;
+    background: var(--border-color);
+    /* Creates grid lines */
+    padding: 1px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.keypad-btn {
+    background: white;
+    border: none;
+    padding: 0.8rem 0;
+    /* Taller buttons */
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #495057;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.keypad-btn:hover {
+    background: #f8f9fa;
+}
+
+.keypad-btn:active {
+    background: #e9ecef;
+}
+
+/* Responsive grid for smaller screens */
+@media (max-width: 900px) {
+    .keypad-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+}
