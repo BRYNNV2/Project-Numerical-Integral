@@ -10,7 +10,8 @@ import './styles/components.css';
 
 function App() {
   const [activePage, setActivePage] = useState('calculator');
-  const [result, setResult] = useState(null);
+  const [method, setMethod] = useState('trapezoidal');
+  const [results, setResults] = useState({});
 
   const handleCalculate = (data) => {
     try {
@@ -18,15 +19,36 @@ function App() {
       let calcResult;
 
       if (hasLimits) {
-        calcResult = calculateIntegral(data.func, data.lowerLimit, data.upperLimit, data.nValue, data.method);
+        if (method === 'comparison') {
+          // Run all 3 methods
+          const trap = calculateIntegral(data.func, data.lowerLimit, data.upperLimit, data.nValue, 'trapezoidal');
+          const sim13 = calculateIntegral(data.func, data.lowerLimit, data.upperLimit, data.nValue, 'simpson13');
+          const sim38 = calculateIntegral(data.func, data.lowerLimit, data.upperLimit, data.nValue, 'simpson38');
+
+          calcResult = {
+            isComparison: true,
+            func: data.func,
+            results: [trap, sim13, sim38]
+          };
+        } else {
+          calcResult = calculateIntegral(data.func, data.lowerLimit, data.upperLimit, data.nValue, method);
+        }
       } else {
         calcResult = solveIndefiniteIntegral(data.func);
       }
 
-      setResult(calcResult);
+      setResults(prev => ({
+        ...prev,
+        [method]: calcResult
+      }));
     } catch (error) {
       alert("Error: " + error.message);
     }
+  };
+
+  const handleMethodChange = (newMethod) => {
+    setMethod(newMethod);
+    // Do NOT clear results
   };
 
   const renderContent = () => {
@@ -40,14 +62,14 @@ function App() {
         return (
           <>
             <InputSection onCalculate={handleCalculate} />
-            {result && <SolutionSteps result={result} />}
+            {results[method] && <SolutionSteps result={results[method]} />}
           </>
         );
     }
   };
 
   return (
-    <Layout activePage={activePage} setActivePage={setActivePage}>
+    <Layout activePage={activePage} setActivePage={setActivePage} method={method} setMethod={handleMethodChange}>
       {renderContent()}
     </Layout>
   );

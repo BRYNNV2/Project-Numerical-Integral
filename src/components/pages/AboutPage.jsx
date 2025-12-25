@@ -14,21 +14,21 @@ const AboutPage = () => {
                 <h3 style={{ color: '#bb1b1b', marginBottom: '1.5rem' }}>Tim Pengembang</h3>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem' }}>
-                    <div className="member-card">
-                        <div style={{ width: '80px', height: '80px', background: '#e9ecef', borderRadius: '50%', margin: '0 auto 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            👤
+                    {[
+                        { name: "Mhd Febri Yansah", nim: "2301020104" },
+                        { name: "Fadhillah Nanda Maulana", nim: "2301020088" },
+                        { name: "Roy Adiyta", nim: "2301020093" },
+                        { name: "Khairul Ilham", nim: "2301020111" },
+                        { name: "Meuthia Kayla Putri", nim: "2301020118" }
+                    ].map((member, index) => (
+                        <div key={index} className="member-card">
+                            <div style={{ width: '80px', height: '80px', background: '#e9ecef', borderRadius: '50%', margin: '0 auto 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>
+                                👤
+                            </div>
+                            <strong style={{ color: 'var(--text-primary)' }}>{member.name}</strong>
+                            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>NIM: {member.nim}</p>
                         </div>
-                        <strong>Anggota 1</strong>
-                        <p style={{ fontSize: '0.9rem', color: '#6c757d' }}>NIM: ...</p>
-                    </div>
-                    <div className="member-card">
-                        <div style={{ width: '80px', height: '80px', background: '#e9ecef', borderRadius: '50%', margin: '0 auto 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            👤
-                        </div>
-                        <strong>Anggota 2</strong>
-                        <p style={{ fontSize: '0.9rem', color: '#6c757d' }}>NIM: ...</p>
-                    </div>
-                    {/* Add more members if needed */}
+                    ))}
                 </div>
             </div>
 

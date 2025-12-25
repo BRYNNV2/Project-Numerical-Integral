@@ -17,7 +17,8 @@
     "nerdamer": "^1.1.13",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-katex": "^3.1.0"
+    "react-katex": "^3.1.0",
+    "recharts": "^3.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

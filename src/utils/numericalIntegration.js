@@ -4,19 +4,27 @@ import 'nerdamer/Algebra';
 import 'nerdamer/Calculus';
 
 // Simple Latex to MathJS converter for our supported symbols
-const preprocessLatex = (latex) => {
+export const preprocessLatex = (latex) => {
     if (!latex) return "";
     let clean = latex;
 
-    // Refined regex for \int with various limit formats
-    // Matches \int followed by:
-    // 1. _{...}^{...}
-    // 2. _...^... (but strictly ensuring we don't eat the whole string)
-    // We'll prioritize brace matching, then single chars or strictly non-greedy numbers if needed.
-    // Safest strategy: Match \int locally.
+    // 0. Global Cleanup: Remove strict formatting wrappers that confuse parsing
+    clean = clean.replace(/\\left|\\right/g, ""); // Remove resizing
+    clean = clean.replace(/\\!/g, ""); // Remove negative spacing
+    clean = clean.replace(/\$/g, ""); // Remove dollar signs
+    clean = clean.replace(/\\mathrm\{([^{}]+)\}/g, "$1"); // Unwrap mathrm
+    clean = clean.replace(/\\text\{([^{}]+)\}/g, "$1"); // Unwrap text
+
+    // 1. Strip function definitions (f(x)=, y=, etc.)
+    // Matches patterns like "f(x) =" or "y :" at the start of the string
+    // Simplified regex: Optional name + optional (arg) + separator (=, :, \colon)
+    clean = clean.replace(/^\s*[a-zA-Z]+\s*(?:\([a-zA-Z0-9]+\))?\s*(?:=|:|\\colon)\s*/, "");
 
     // Remove \int_{...}^{...} (Standard MathLive)
     clean = clean.replace(/\\int_\{([^{}]+)\}\^\{([^{}]+)\}\s*/g, "");
+
+    // Also strip generic "f(x)" if it appears at start without equals (just in case)
+    // clean = clean.replace(/^f\(x\)\s*/i, "");
 
     // Remove \int_a^b (Single char limits or simple numbers?)
     // This is the dangerous one. Let's assume limits are short or separated by space if logical.
@@ -36,17 +44,18 @@ const preprocessLatex = (latex) => {
     clean = clean.replace(/\\mathrm\{([^{}]+)\}/g, "$1");
     clean = clean.replace(/\\mathrm\(([^()]+)\)/g, "$1");
 
-    // Remove dx, dt at the end, including potential latex spacing/styling
+    // CRITICAL FIX: explicit removal of 'dx' (differentials) anywhere in the string
+    // e.g. \sqrt{x dx}, \int x dx, etc.
     // Matches:
-    // 1. dx at end (plain)
-    // 2. \, dx or \ dx
-    // 3. previously stripped \mathrm{d}x which became dx
-    // Added \s* at the end to handle any trailing whitespace
-    clean = clean.replace(/(\\?\,|\\|\\!)*\s*d[a-z]\s*$/i, "");
+    // 1. \text{d}x or \mathrm{d}x patterns (escaped d)
+    // 2. Space + dx + boundary
+    clean = clean.replace(/\\text\{d\}[a-z]/gi, "");
+    clean = clean.replace(/\\mathrm\{d\}[a-z]/gi, "");
 
-    // Explicitly remove standalone "dx" if it survived (e.g. from \mathrm{d}x -> dx)
-    // Only if it's at the end
-    clean = clean.replace(/\s+d[a-z]\s*$/i, "");
+    // Remove dx, dt at the end or inside string, including potential latex spacing/styling
+    // We treat 'd' followed by a single letter as a differential if it's isolated
+    // Common cases: " dx", "\,dx", "\!dx"
+    clean = clean.replace(/(\\?\,|\\|\\!)*\s*d[a-z](?![a-z])/gi, "");
 
     // Replace fractions: \frac{a}{b} -> (a)/(b)
     clean = clean.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, "($1)/($2)");
@@ -173,7 +182,32 @@ export const calculateIntegral = (func, aStr, bStr, nStr, method) => {
     });
 
     // Step 3: Table of values
-    let tableMath = "\\begin{array}{|c|c|c|} \\hline i & x_i & f(x_i) \\\\ \\hline ";
+    // Helper for visual substitution
+    const formatSubstitution = (fStrRaw, xVal) => {
+        try {
+            // Clean the function string for display purposes
+            // Strip '$' to avoid breaking array math mode
+            let cleanStr = fStrRaw.replace(/\$/g, "");
+            // Reduce visual clutter
+            cleanStr = cleanStr.replace(/\\left|\\right/g, "");
+            // Remove function prefixes if they exist in raw string (e.g. f(x)=)
+            cleanStr = cleanStr.replace(/^\s*[a-zA-Z]+\s*(?:\([a-zA-Z0-9]+\))?\s*(?:=|:|\\colon)\s*/, "");
+
+            // Strip differentials for display (matches preprocessLatex logic)
+            cleanStr = cleanStr.replace(/\\text\{d\}[a-z]/gi, "");
+            cleanStr = cleanStr.replace(/\\mathrm\{d\}[a-z]/gi, "");
+            cleanStr = cleanStr.replace(/(\\?\,|\\|\\!)*\s*d[a-z](?![a-z])/gi, "");
+
+            const valStr = xVal < 0 ? `(${xVal.toFixed(4)})` : xVal.toFixed(4);
+
+            // Replace x with value
+            return cleanStr.replace(/(?<![a-zA-Z\\])x(?![a-zA-Z])/g, `(${valStr})`);
+        } catch (e) {
+            return fStrRaw;
+        }
+    };
+
+    let tableMath = "\\begin{array}{|c|c|l|c|} \\hline i & x_i & f(x_i) \\text{ (Evaluasi)} & f(x_i) \\\\ \\hline ";
     const xValues = [];
     const yValues = [];
 
@@ -182,18 +216,21 @@ export const calculateIntegral = (func, aStr, bStr, nStr, method) => {
         const y = evaluateFunc(func, x); // Using mathjs evaluate
         xValues.push(x);
         yValues.push(y);
+
+        const subStr = formatSubstitution(func, x);
+
         // Limit table rows to 5 first and last to avoid UI lag if N is large
         if (N <= 10 || i < 3 || i > N - 3) {
-            tableMath += `${i} & ${x.toFixed(4)} & ${y.toFixed(4)} \\\\ `;
+            tableMath += `${i} & ${x.toFixed(4)} & f(${x.toFixed(4)}) = ${subStr} & ${y.toFixed(4)} \\\\ `;
         } else if (i === 3) {
-            tableMath += `\\dots & \\dots & \\dots \\\\ `;
+            tableMath += `\\dots & \\dots & \\dots & \\dots \\\\ `;
         }
     }
     tableMath += "\\hline \\end{array}";
 
     steps.push({
         title: "Tabel Nilai Fungsi",
-        description: "Evaluasi f(x) pada setiap titik xi.",
+        description: "Evaluasi f(x) pada setiap titik xi dengan mensubstitusi nilai x.",
         math: tableMath
     });
 
@@ -260,11 +297,15 @@ export const calculateIntegral = (func, aStr, bStr, nStr, method) => {
     });
 
     // Step 5: Error Calculation
+    let trueValue = null;
+    let absError = null;
+    let relError = null;
+
     try {
-        const trueValue = calculateExact(func, a, b);
-        const absError = Math.abs(trueValue - result);
+        trueValue = calculateExact(func, a, b);
+        absError = Math.abs(trueValue - result);
         // Avoid division by zero
-        const relError = Math.abs(trueValue) > 1e-10 ? (absError / Math.abs(trueValue)) * 100 : 0;
+        relError = Math.abs(trueValue) > 1e-10 ? (absError / Math.abs(trueValue)) * 100 : 0;
 
         steps.push({
             title: "Perhitungan Error (Validasi)",
@@ -280,6 +321,7 @@ export const calculateIntegral = (func, aStr, bStr, nStr, method) => {
     return {
         func, lowerLimit: a, upperLimit: b, nValue: N, method,
         result,
+        trueValue, absError, relError, // Expose for comparison
         steps
     };
 };

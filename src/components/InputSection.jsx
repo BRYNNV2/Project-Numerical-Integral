@@ -5,7 +5,6 @@ import 'mathlive';
 import '../styles/components.css';
 
 const InputSection = ({ onCalculate }) => {
-    const [method, setMethod] = useState('trapezoidal');
     const [func, setFunc] = useState('');
     const [lowerLimit, setLowerLimit] = useState('');
     const [upperLimit, setUpperLimit] = useState('');
@@ -50,7 +49,7 @@ const InputSection = ({ onCalculate }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         // Start calculation with current Latex value
-        onCalculate({ func, lowerLimit, upperLimit, nValue, method });
+        onCalculate({ func, lowerLimit, upperLimit, nValue });
     };
 
     const handleInput = (e) => {
@@ -63,43 +62,9 @@ const InputSection = ({ onCalculate }) => {
             <h2 className="section-title">Integral Numerik</h2>
 
             <form onSubmit={handleSubmit} className="calculator-form">
-                <div className="method-selector">
-                    <label className="input-label">Metode:</label>
-                    <div className="radio-group">
-                        <label className={`radio-option ${method === 'trapezoidal' ? 'active' : ''}`}>
-                            <input
-                                type="radio"
-                                name="method"
-                                value="trapezoidal"
-                                checked={method === 'trapezoidal'}
-                                onChange={() => setMethod('trapezoidal')}
-                            />
-                            Aturan Trapesium
-                        </label>
-                        <label className={`radio-option ${method === 'simpson13' ? 'active' : ''}`}>
-                            <input
-                                type="radio"
-                                name="method"
-                                value="simpson13"
-                                checked={method === 'simpson13'}
-                                onChange={() => setMethod('simpson13')}
-                            />
-                            Simpson 1/3
-                        </label>
-                        <label className={`radio-option ${method === 'simpson38' ? 'active' : ''}`}>
-                            <input
-                                type="radio"
-                                name="method"
-                                value="simpson38"
-                                checked={method === 'simpson38'}
-                                onChange={() => setMethod('simpson38')}
-                            />
-                            Simpson 3/8
-                        </label>
-                    </div>
-                </div>
+                {/* Method selector moved to Sidebar */}
 
-                <div className="main-input-container">
+                <div className="main-input-row" style={{ flexWrap: 'wrap' }}>
                     <div className="input-group full-width">
                         {/* MathLive Component */}
                         <math-field
