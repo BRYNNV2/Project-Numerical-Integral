@@ -1,8 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import ApiKeyInput from './Chatbot/ApiKeyInput';
+import ChatWindow from './Chatbot/ChatWindow';
+import { MessageSquare, X } from 'lucide-react';
 import '../styles/chatbot.css';
+
+const FALLBACK_KEY = 'AIzaSyCWo-dBr2nm3omG7Cjp8vhzLjIDraT1jDU'; // Fallback for immediate dev testing
 
 function ChatbotSidebar() {
     const [isOpen, setIsOpen] = useState(false);
+    const [apiKey, setApiKey] = useState('');
+
+    useEffect(() => {
+        // Priority 1: Environment Variable
+        const envKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (envKey) {
+            setApiKey(envKey);
+            return;
+        }
+
+        // Priority 2: Hardcoded Fallback (for immediate fix if env fails to load without restart)
+        if (FALLBACK_KEY) {
+            setApiKey(FALLBACK_KEY);
+            return;
+        }
+
+        // Priority 3: Local Storage
+        const storedKey = localStorage.getItem('gemini_api_key');
+        if (storedKey) setApiKey(storedKey);
+    }, []);
+
+    const handleSaveKey = (key) => {
+        setApiKey(key);
+        localStorage.setItem('gemini_api_key', key);
+    };
+
+    const handleClearKey = () => {
+        setApiKey('');
+        localStorage.removeItem('gemini_api_key');
+    };
 
     const toggleSidebar = () => {
         setIsOpen(!isOpen);
@@ -16,34 +51,29 @@ function ChatbotSidebar() {
                 onClick={toggleSidebar}
                 aria-label="Open Chatbot"
             >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z" fill="currentColor" />
-                    <path d="M7 9H9V11H7V9ZM11 9H13V11H11V9ZM15 9H17V11H15V9Z" fill="currentColor" />
-                </svg>
-                <span>Chat Support</span>
+                <MessageSquare size={24} />
+                <span>Ask AI</span>
             </button>
 
             {/* Sidebar */}
             <div className={`chatbot-sidebar ${isOpen ? 'open' : ''}`}>
                 <div className="chatbot-sidebar-header">
-                    <h3>Brand Support Agent</h3>
+                    <h3>Numerical Assistant</h3>
                     <button
                         className="chatbot-close-btn"
                         onClick={toggleSidebar}
                         aria-label="Close Chatbot"
                     >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z" fill="currentColor" />
-                        </svg>
+                        <X size={24} />
                     </button>
                 </div>
-                <div className="chatbot-iframe-container">
-                    <iframe
-                        src={`https://cdn.botpress.cloud/webchat/v3.5/shareable.html?configUrl=https://files.bpcontent.cloud/2025/12/23/07/20251223073832-CL79WOF7.json&t=${Date.now()}`}
-                        title="Botpress Webchat"
-                        className="chatbot-iframe"
-                        key={Date.now()}
-                    />
+
+                <div className="chatbot-content">
+                    {!apiKey ? (
+                        <ApiKeyInput onSave={handleSaveKey} />
+                    ) : (
+                        <ChatWindow apiKey={apiKey} onClearKey={handleClearKey} />
+                    )}
                 </div>
             </div>
 
