@@ -4,6 +4,7 @@ import InputSection from './components/InputSection';
 import SolutionSteps from './components/SolutionSteps';
 import TheoryPage from './components/pages/TheoryPage';
 import AboutPage from './components/pages/AboutPage';
+import ChatbotSidebar from './components/ChatbotSidebar';
 import { calculateIntegral } from './utils/numericalIntegration';
 import { solveIndefiniteIntegral } from './utils/symbolicIntegration';
 import './styles/components.css';
@@ -69,9 +70,12 @@ function App() {
   };
 
   return (
-    <Layout activePage={activePage} setActivePage={setActivePage} method={method} setMethod={handleMethodChange}>
-      {renderContent()}
-    </Layout>
+    <>
+      <Layout activePage={activePage} setActivePage={setActivePage} method={method} setMethod={handleMethodChange}>
+        {renderContent()}
+      </Layout>
+      <ChatbotSidebar />
+    </>
   );
 }
 
