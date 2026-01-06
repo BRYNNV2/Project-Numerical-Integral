@@ -4,7 +4,7 @@ import ChatWindow from './Chatbot/ChatWindow';
 import { MessageSquare, X } from 'lucide-react';
 import '../styles/chatbot.css';
 
-const FALLBACK_KEY = 'AIzaSyCWo-dBr2nm3omG7Cjp8vhzLjIDraT1jDU'; // Fallback for immediate dev testing
+const FALLBACK_KEY = ''; // Removed leaked key
 
 function ChatbotSidebar() {
     const [isOpen, setIsOpen] = useState(false);
@@ -15,12 +15,6 @@ function ChatbotSidebar() {
         const envKey = import.meta.env.VITE_GEMINI_API_KEY;
         if (envKey) {
             setApiKey(envKey);
-            return;
-        }
-
-        // Priority 2: Hardcoded Fallback (for immediate fix if env fails to load without restart)
-        if (FALLBACK_KEY) {
-            setApiKey(FALLBACK_KEY);
             return;
         }
 
