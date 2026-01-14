@@ -3,104 +3,155 @@ import nerdamer from 'nerdamer';
 import 'nerdamer/Algebra';
 import 'nerdamer/Calculus';
 
+// Helper to extract balanced brace content
+const extractArg = (str, startIdx) => {
+    let balance = 0;
+    let content = "";
+    let i = startIdx;
+
+    // Skip initial whitespace or non-brace chars if needed, but usually we start at {
+    if (str[i] !== '{') return { content: "", endIdx: i }; // Should not happen if called correctly
+
+    for (; i < str.length; i++) {
+        const char = str[i];
+        if (char === '{') {
+            balance++;
+            if (balance > 1) content += char; // Don't include outer {
+        } else if (char === '}') {
+            balance--;
+            if (balance === 0) {
+                // Done
+                return { content, endIdx: i };
+            } else {
+                content += char;
+            }
+        } else {
+            content += char;
+        }
+    }
+    return { content, endIdx: i };
+};
+
 // Simple Latex to MathJS converter for our supported symbols
 export const preprocessLatex = (latex) => {
     if (!latex) return "";
     let clean = latex;
 
-    // 0. Global Cleanup: Remove strict formatting wrappers that confuse parsing
-    clean = clean.replace(/\\left|\\right/g, ""); // Remove resizing
-    clean = clean.replace(/\\!/g, ""); // Remove negative spacing
-    clean = clean.replace(/\$/g, ""); // Remove dollar signs
-    clean = clean.replace(/\\mathrm\{([^{}]+)\}/g, "$1"); // Unwrap mathrm
-    clean = clean.replace(/\\text\{([^{}]+)\}/g, "$1"); // Unwrap text
+    // 0. Global Cleanup: Remove strict formatting wrappers
+    clean = clean.replace(/\\left|\\right/g, "");
+    clean = clean.replace(/\\!/g, "");
+    clean = clean.replace(/\$/g, "");
+    clean = clean.replace(/\\mathrm\{([^{}]+)\}/g, "$1");
+    clean = clean.replace(/\\text\{([^{}]+)\}/g, "$1");
 
-    // 1. Strip function definitions (f(x)=, y=, etc.)
-    // Matches patterns like "f(x) =" or "y :" at the start of the string
-    // Simplified regex: Optional name + optional (arg) + separator (=, :, \colon)
+    // 1. Strip function definitions
     clean = clean.replace(/^\s*[a-zA-Z]+\s*(?:\([a-zA-Z0-9]+\))?\s*(?:=|:|\\colon)\s*/, "");
 
     // Remove \int_{...}^{...} (Standard MathLive)
+    // We use a loop to handle nested braces in limits if necessary, but regex usually suffices for limits 
+    // unless they are very complex. For now, regex is okay for limits removal as they are removed entirely.
     clean = clean.replace(/\\int_\{([^{}]+)\}\^\{([^{}]+)\}\s*/g, "");
-
-    // Also strip generic "f(x)" if it appears at start without equals (just in case)
-    // clean = clean.replace(/^f\(x\)\s*/i, "");
-
-    // Remove \int_a^b (Single char limits or simple numbers?)
-    // This is the dangerous one. Let's assume limits are short or separated by space if logical.
-    // Instead of [^\s]+, let's use [a-zA-Z0-9\.]+ (alphanumeric+dot) and maybe strict braces for complex.
-    // Or just simple: \int_[a-zA-Z0-9]+\^[a-zA-Z0-9]+\s*
     clean = clean.replace(/\\int_[a-zA-Z0-9]+\^[a-zA-Z0-9]+\s*/g, "");
-
-    // Also remove just \int (no limits)
     clean = clean.replace(/\\int\s*/g, "");
 
-    // Remove specific MathLive spacing commands like \! (negative space)
-    clean = clean.replace(/\\!/g, "");
-
-    // Aggressively remove \mathrm{d} or \mathrm(d) blocks first
-    // MathJS doesn't understand \mathrm, so just strip it.
-    // Matches \mathrm{...} or \mathrm(...)
-    clean = clean.replace(/\\mathrm\{([^{}]+)\}/g, "$1");
-    clean = clean.replace(/\\mathrm\(([^()]+)\)/g, "$1");
-
-    // CRITICAL FIX: explicit removal of 'dx' (differentials) anywhere in the string
-    // e.g. \sqrt{x dx}, \int x dx, etc.
-    // Matches:
-    // 1. \text{d}x or \mathrm{d}x patterns (escaped d)
-    // 2. Space + dx + boundary
+    // Differentials cleanup
     clean = clean.replace(/\\text\{d\}[a-z]/gi, "");
     clean = clean.replace(/\\mathrm\{d\}[a-z]/gi, "");
-
-    // Remove dx, dt at the end or inside string, including potential latex spacing/styling
-    // We treat 'd' followed by a single letter as a differential if it's isolated
-    // Common cases: " dx", "\,dx", "\!dx"
     clean = clean.replace(/(\\?\,|\\|\\!)*\s*d[a-z](?![a-z])/gi, "");
 
-    // Replace fractions: \frac{a}{b} -> (a)/(b)
-    clean = clean.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, "($1)/($2)");
+    // 2. Handle Recursive/Nested Commands (\sqrt, \frac) manually
+    // We cannot use simple regex replacement for these because of nested braces { }
 
-    // Replace sqrt: \sqrt{x} -> sqrt(x)
-    clean = clean.replace(/\\sqrt\{([^{}]+)\}/g, "sqrt($1)");
+    // Helper to replace specific command with a transform function
+    const replaceCommand = (input, entryCmd, transformFn) => {
+        let output = "";
+        let i = 0;
+        while (i < input.length) {
+            if (input.substr(i).startsWith(entryCmd)) {
+                // Found command, look for first brace
+                const braceStart = input.indexOf('{', i + entryCmd.length);
+                if (braceStart !== -1) {
+                    // Extract first arg
+                    const arg1 = extractArg(input, braceStart);
 
-    // Handle trig powers BEFORE removing backslashes (to avoid ambiguity)
-    // \sin^3(x) -> sin(x)^3
-    // Matches: \sin (or cos, etc) ^ {n} (arg)
-    // We assume arguments are in ( ) or { } or just after spacing
+                    // If command is \frac, we need second arg
+                    let replacement = "";
+                    let nextIdx = arg1.endIdx + 1;
 
-    // Case 1: \sin^3(x) or \sin^{3}(x)
+                    if (entryCmd === "\\frac") {
+                        // Look for second brace
+                        const braceStart2 = input.indexOf('{', nextIdx);
+                        if (braceStart2 !== -1) {
+                            const arg2 = extractArg(input, braceStart2);
+                            // Process recursive inside args!
+                            const procArg1 = preprocessLatex(arg1.content); // Recurse
+                            const procArg2 = preprocessLatex(arg2.content); // Recurse
+                            replacement = transformFn(procArg1, procArg2);
+                            i = arg2.endIdx + 1;
+                        } else {
+                            // Malformed frac, just keep going or fail?
+                            // Let's just output command as is (fail gracefully)
+                            output += input.substring(i, nextIdx);
+                            i = nextIdx;
+                        }
+                    } else {
+                        // Single arg command (sqrt)
+                        const procArg1 = preprocessLatex(arg1.content); // Recurse
+                        replacement = transformFn(procArg1);
+                        i = arg1.endIdx + 1;
+                    }
+
+                    if (replacement) output += replacement;
+                } else {
+                    // No brace found after command, just print command char
+                    output += input[i];
+                    i++;
+                }
+            } else {
+                output += input[i];
+                i++;
+            }
+        }
+        return output;
+    };
+
+    // Replace \sqrt{...} -> sqrt(...)
+    if (clean.includes("\\sqrt")) {
+        clean = replaceCommand(clean, "\\sqrt", (a) => `sqrt(${a})`);
+    }
+
+    // Replace \frac{...}{...} -> (...)/(...)
+    if (clean.includes("\\frac")) {
+        clean = replaceCommand(clean, "\\frac", (a, b) => `(${a})/(${b})`);
+    }
+
+    // 3. Post-recursion cleanups (simple replacements)
+
+    // Trig powers: \sin^3(x) -> sin(x)^3
     clean = clean.replace(/\\(sin|cos|tan|sec|csc|cot)\^\{?([0-9\.]+)\}?\s*\(([^)]+)\)/g, "$1($3)^$2");
 
-    // Case 2: \sin^3 x (simple var) - risky but common in simple inputs
-    // We'll handle explicit parens first (Case 1), then maybe check for remaining
-
     // Replace trig/log commands
-    clean = clean.replace(/\\(sin|cos|tan|log|ln|exp|arcsin|arccos|arctan)/g, "$1");
+    clean = clean.replace(/\\(sin|cos|tan|csc|sec|cot|log|ln|exp|arcsin|arccos|arctan)/g, "$1");
 
-    // Handle power { }
-    // x^{3} -> x^(3)
+    // Explicit function calls: "sin x" -> "sin(x)"
+    clean = clean.replace(/(sin|cos|tan|csc|sec|cot|log|ln|exp|arcsin|arccos|arctan)\s+(?![\(\[])([a-zA-Z0-9\.]+)/g, "$1($2)");
+
+    // Powers with braces: x^{3} -> x^(3)
+    // Note: If we already did recursion, x^{3} might remain if it wasn't inside sqrt/frac.
+    // We still need to handle top-level powers.
+    // However, replaceCommand logic above doesn't touch things outside commands.
+    // So x^{2} is still x^{2}.
     clean = clean.replace(/\^{([^{}]+)\}/g, "^($1)");
 
-    // Remove left-over braces if generic: {3x} -> (3x)
-    // Be careful not to break other things, but usually safe for final cleanup
+    // Generic { } removal: {3x} -> (3x)
     clean = clean.replace(/\{([^{}]+)\}/g, "($1)");
 
-    // Remove \left and \right (MathLive auto-sizing)
-    clean = clean.replace(/\\left|\\right/g, "");
-
-    // Remove left-over backslashes (e.g. \,) strictly if they are just spacers
+    // Multiplications and miscellany
     clean = clean.replace(/\\,/g, " ");
-
-    // Greek letters: \pi -> pi
     clean = clean.replace(/\\pi/g, "pi");
-
-    // Multiplication \cdot
     clean = clean.replace(/\\cdot/g, "*");
 
-    // Fix spacing
-    clean = clean.trim();
-
-    return clean;
+    return clean.trim();
 };
 
 // Helper to evaluate function safely
@@ -296,8 +347,54 @@ export const calculateIntegral = (func, aStr, bStr, nStr, method) => {
         math: formulaMath + ` \\\\ \\mathbf{L \\approx ${result.toFixed(6)}}`
     });
 
-    // Step 5: Error Calculation
+    // Step 5: Symbolic / Exact Value Analysis
     let trueValue = null;
+    try {
+        const cleanFunc = preprocessLatex(func);
+
+        // 1. Get Indefinite Integral (Antiderivative) F(x)
+        // using nerdamer's symbolic engine
+        const antiderivativeObj = nerdamer(`integrate(${cleanFunc}, x)`);
+        const antiderivativeLatex = antiderivativeObj.toTeX();
+        const antiderivativeStr = antiderivativeObj.text(); // raw string for evaluation
+
+        // 2. Evaluate F(b) and F(a)
+        // Note: nerdamer.evaluate might be better but math.evaluate is robust for arithmetic
+        const scopeB = { x: b, e: Math.E, pi: Math.PI };
+        const scopeA = { x: a, e: Math.E, pi: Math.PI };
+
+        // We evaluate the raw antiderivative string
+        const Fb = math.evaluate(antiderivativeStr, scopeB);
+        const Fa = math.evaluate(antiderivativeStr, scopeA);
+
+        trueValue = Fb - Fa; // This is the exact value derived step-by-step
+
+        const stepMath = `\\text{Cari Antiturunan } F(x): \\\\
+        \\int ${preprocessLatex(func)} \\, dx = ${antiderivativeLatex} + C \\\\
+        \\text{Evaluasi Batas } [a, b] = [${a}, ${b}]: \\\\
+        \\begin{aligned}
+        I_{true} &=F(b) - F(a) \\\\
+        &= [${antiderivativeLatex}]_{${a}}^{${b}} \\\\
+        &= (${Fb.toFixed(6)}) - (${Fa.toFixed(6)}) \\\\
+        &= \\mathbf{${trueValue.toFixed(6)}}
+        \\end{aligned}`;
+
+        steps.push({
+            title: "Analisis Nilai Sejati (Kalkulus)",
+            description: "Mencari nilai eksak dengan integral analitik untuk validasi.",
+            math: stepMath
+        });
+
+    } catch (e) {
+        console.warn("Symbolic analysis failed:", e);
+        // Fallback or skip step if symbolic fails
+        // We still strictly need trueValue for error calc, so we might try the old calculateExact method as backup
+        if (trueValue === null) {
+            try {
+                trueValue = calculateExact(func, a, b);
+            } catch (ex) { trueValue = 0; }
+        }
+    }
     let absError = null;
     let relError = null;
 

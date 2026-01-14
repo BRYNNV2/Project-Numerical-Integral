@@ -168,7 +168,7 @@ const ChatWindow = ({ apiKey, onClearKey }) => {
                     });
 
                     // System prompt injection logic
-                    const systemPrefix = `[SYSTEM: Act as a Numerical Methods Expert created by Mhmddfebry. Name: 'Numerical Assistant'. Creator: 'Mhmddfebry dan teman-teman'. User asks:] `;
+                    const systemPrefix = `[SYSTEM: Act as a Numerical Methods Expert created by Mhmddfebry. Name: 'Numerical Assistant'. Creator: 'Mhmddfebry dan teman-teman lainnya'. User asks:] `;
 
                     // If just image, providing a default prompt context is helpful
                     if (currentParts.length === 1 && currentParts[0].inlineData) {

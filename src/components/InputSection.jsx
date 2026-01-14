@@ -87,6 +87,7 @@ const InputSection = ({ onCalculate }) => {
 
                     <div className="dx-display">
                         <InlineMath math="dx" />
+                        <span style={{ fontSize: '0.7rem', color: '#888', marginLeft: '5px' }}>(Radian)</span>
                     </div>
 
                     <button type="submit" className="btn btn-primary btn-go">
